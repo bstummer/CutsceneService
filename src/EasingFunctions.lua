@@ -121,7 +121,7 @@ local function InOutCubic(t:n, b:n, c:n, d:n):n
 	if t < 1 then
 		return c / 2 * t * t * t + b
 	else
-		t = t - 2
+		t -= 2
 		return c / 2 * (t * t * t + 2) + b
 	end
 end
@@ -147,7 +147,7 @@ local function InOutQuart(t:n, b:n, c:n, d:n):n
 	if t < 1 then
 		return c / 2 * pow(t, 4) + b
 	else
-		t = t - 2
+		t -= 2
 		return -c / 2 * (pow(t, 4) - 2) + b
 	end
 end
@@ -275,7 +275,7 @@ local function InElastic(t:n, b:n, c:n, d:n, a:n, p:n):n
 	else
 		s = p / (2 * pi) * asin(c/a)
 	end
-	t = t - 1
+	t -= 1
 	return -(a * pow(2, 10 * t) * sin((t * d - s) * (2 * pi) / p)) + b
 end
 
@@ -308,10 +308,10 @@ local function InOutElastic(t:n, b:n, c:n, d:n, a:n, p:n):n
 		s = p / (2 * pi) * asin(c / a)
 	end
 	if t < 1 then
-		t = t - 1
+		t -= 1
 		return -0.5 * (a * pow(2, 10 * t) * sin((t * d - s) * (2 * pi) / p)) + b
 	else
-		t = t - 1
+		t -= 1
 		return a * pow(2, -10 * t) * sin((t * d - s) * (2 * pi) / p ) * 0.5 + c + b
 	end
 end
@@ -339,7 +339,7 @@ local function InOutBack(t:n, b:n, c:n, d:n):n
 	if t < 1 then
 		return c / 2 * (t * t * ((s + 1) * t - s)) + b
 	else
-		t = t - 2
+		t -= 2
 		return c / 2 * (t * t * ((s + 1) * t + s) + 2) + b
 	end
 end
@@ -354,16 +354,16 @@ end
 
 local function OutBounce(t:n, b:n, c:n, d:n):n
 	t /= d
-	if t < 1 / 2.75 then
+	if t < 0.36363636363636 then
 		return c * (7.5625 * t * t) + b
-	elseif t < 2 / 2.75 then
-		t = t - (1.5 / 2.75)
+	elseif t < 0.72727272727273 then
+		t -= 0.54545454545455
 		return c * (7.5625 * t * t + 0.75) + b
-	elseif t < 2.5 / 2.75 then
-		t = t - (2.25 / 2.75)
+	elseif t < 0.90909090909091 then
+		t -= 0.81818181818182
 		return c * (7.5625 * t * t + 0.9375) + b
 	else
-		t = t - (2.625 / 2.75)
+		t -= 0.95454545454545
 		return c * (7.5625 * t * t + 0.984375) + b
 	end
 end
