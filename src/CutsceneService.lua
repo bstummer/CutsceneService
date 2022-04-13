@@ -2,7 +2,7 @@
 
 Tutorial & Documentation: devforum.roblox.com/t/718571
 
-Version of this module: 1.4.0
+Version of this module: 1.4.1
 
 Created by Vaschex
 
@@ -37,11 +37,11 @@ do
 end
 char = plr.Character or plr.CharacterAdded:Wait()
 
+local RunService = game:GetService("RunService")
+local StarterGui = game.StarterGui
 local controls = require(plr.PlayerScripts.PlayerModule):GetControls()
 local easingFunctions = require(script.EasingFunctions)
 local rootPart = char:WaitForChild("HumanoidRootPart")
-local RunService = game:GetService("RunService")
-local StarterGui = game.StarterGui
 local camera = workspace.CurrentCamera
 local clock = os.clock
 
@@ -165,16 +165,18 @@ do
 	end
 end
 
---credits to DejaVu_Loop for this function
-local function getCF(points:{[number]:CFrame}, ratio:number):CFrame
+--de Casteljau's algorithm
+local function getCF(points:{[number]:CFrame}, t:number):CFrame
+	local copy = {unpack(points)}
 	repeat
-		local ntb:{[number]:CFrame} = {}
-		for i, v in ipairs(points) do
-			if i ~= 1 then ntb[i-1] = points[i-1]:Lerp(v, ratio) end
+		for i, v in ipairs(copy) do
+			if i ~= 1 then copy[i-1] = copy[i-1]:Lerp(v, t) end
 		end
-		points = ntb
-	until #points == 1
-	return points[1]
+		if #copy ~= 1 then
+			copy[#copy] = nil
+		end
+	until #copy == 1
+	return copy[1]
 end
 
 local function getCoreGuisEnabled()
@@ -187,11 +189,10 @@ local function getCoreGuisEnabled()
 	}
 end
 
-module.Functions = {
+module.Enum = {
 	DisableControls = "DisableControls",
 	CurrentCameraPoint = "CurrentCameraPoint",
 	DefaultCameraPoint = "DefaultCameraPoint",
-	YieldAfterCutscene = "YieldAfterCutscene",
 	FreezeCharacter = "FreezeCharacter",
 	CustomCamera = "CustomCamera",
 }
@@ -241,10 +242,6 @@ local specialFunctions = {
 		end}
 	},
 	End = {
-		{"YieldAfterCutscene", function(_, waitTime)
-			assert(waitTime, "YieldAfterCutscene Argument 1 missing or nil")
-			task.wait(waitTime)
-		end},
 		{"DisableControls", function()
 			controls:Enable(true)
 		end},
@@ -266,17 +263,6 @@ end
 for i, v in ipairs(specialFunctions.End) do
 	table.insert(specialFunctions.EndKeys, v[1])
 	specialFunctions.End[i] = v[2]
-end
-
---check if next argument is argument for special function
---recursive function to enable unlimited amount of args
---replace this by a loop
-local function checkNext(args:{any}, a:{any}, init:number)
-	local Next = args[init+1]
-	if (Next or Next == false) and typeof(Next) ~= "string" and typeof(Next) ~= "EnumItem" then
-		table.insert(a, Next)
-		checkNext(args, a, init+1)
-	end
 end
 
 local cutscene = {}
@@ -486,31 +472,25 @@ function cutscene:Resume():()
 	end
 end
 
-function cutscene:Cancel(resetCamera:boolean?):()
+function cutscene:Cancel():()
 	if module.Playing then
 		RunService:UnbindFromRenderStep("Cutscene")
 		module.Playing = nil
 
 		for _, v in ipairs(self.SpecialFunctions[2]) do
-			if type(v) == "table" then
-				if v[1] ~= "YieldAfterCutscene" then
-					specialFunctions.End[v[1]](self, select(2, unpack(v)))
-				end
+			if type(v) == "table" then			
+				specialFunctions.End[v[1]](self, select(2, unpack(v)))
 			else
-				if v ~= "YieldAfterCutscene" then
-					specialFunctions.End[v](self)
-				end
+				specialFunctions.End[v](self)
 			end
 		end
 
-		if resetCamera ~= false then
-			if not self.CustomCamera then
-				camera.CameraType = self.PreviousCameraType
-			end
-			for k, v in next, self.PreviousCoreGuis do
-				if v then
-					StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
-				end
+		if not self.CustomCamera then
+			camera.CameraType = self.PreviousCameraType
+		end
+		for k, v in next, self.PreviousCoreGuis do
+			if v then
+				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
 			end
 		end
 		self.PlaybackState = Enum.PlaybackState.Cancelled
@@ -534,6 +514,8 @@ function module:Create(points:Instance|{[number]:CFrame}, duration:number, ...)
 	self.PlaybackState = Enum.PlaybackState.Begin
 	self.Progress = 0
 	self.Duration = duration
+	self.PreviousCameraType = nil
+	self.PreviousCoreGuis = nil
 
 	local args = {...}
 
@@ -574,13 +556,25 @@ function module:Create(points:Instance|{[number]:CFrame}, duration:number, ...)
 		local idx = 0
 		repeat
 			idx = table.find(args, v, idx+1)
-			if idx then
-				local a = {}
-				checkNext(args, a, idx)
+			if idx then --if special function is in args
+				local a = {} --arguments for s.f.
+
+				local init = idx + 1 --check for arguments for s.f
+				repeat
+					local Next = args[init]
+					local isArg = (Next or Next == false)
+						and typeof(Next) ~= "string"
+						and typeof(Next) ~= "EnumItem"
+					if isArg then
+						table.insert(a, Next)
+						init += 1
+					end
+				until not isArg
+
 				if #a == 0 then
 					table.insert(self.SpecialFunctions[1], i)
 				else
-					table.insert(a, 1, i)
+					table.insert(a, 1, i) --first number is s.f., after that args
 					table.insert(self.SpecialFunctions[1], a)
 				end
 			end
@@ -592,7 +586,19 @@ function module:Create(points:Instance|{[number]:CFrame}, duration:number, ...)
 			idx = table.find(args, v, idx+1)
 			if idx then
 				local a = {}
-				checkNext(args, a, idx)
+
+				local init = idx + 1
+				repeat
+					local Next = args[init]
+					local isArg = (Next or Next == false)
+						and typeof(Next) ~= "string"
+						and typeof(Next) ~= "EnumItem"
+					if isArg then
+						table.insert(a, Next)
+						init += 1
+					end
+				until not isArg
+
 				if #a == 0 then
 					table.insert(self.SpecialFunctions[2], i)
 				else
@@ -666,16 +672,14 @@ function queue:Resume():()
 	end
 end
 
-function queue:Cancel(resetCamera:boolean?):()
+function queue:Cancel():()
 	if module.Playing then
 		self.CurrentCutscene:Cancel(false)
 		self.CurrentCutscene = nil
-		if resetCamera ~= false then
-			camera.CameraType = self.PreviousCameraType
-			for k, v in next, self.PreviousCoreGuis do
-				if v then
-					StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
-				end
+		camera.CameraType = self.PreviousCameraType
+		for k, v in next, self.PreviousCoreGuis do
+			if v then
+				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
 			end
 		end
 		for _, v in ipairs(self.Cutscenes) do
