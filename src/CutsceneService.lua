@@ -2,7 +2,7 @@
 
 Tutorial & Documentation: devforum.roblox.com/t/718571
 
-Version of this module: 1.4.1
+Version of this module: 1.4.3
 
 Created by Vaschex
 
@@ -252,11 +252,13 @@ local specialFunctions = {
 			camera.CameraType = self.PreviousCameraType
 			camera = workspace.CurrentCamera
 		end}
-	},
-	StartKeys = {}, EndKeys = {}
+	}
 }
 
-for i, v in ipairs(specialFunctions.Start) do --configure specialFunctions
+--configure specialFunctions table
+specialFunctions.StartKeys = {}
+specialFunctions.EndKeys = {}
+for i, v in ipairs(specialFunctions.Start) do
 	table.insert(specialFunctions.StartKeys, v[1])
 	specialFunctions.Start[i] = v[2]
 end
@@ -270,8 +272,16 @@ cutscene.__index = cutscene
 cutscene.ClassName = "Cutscene"
 
 function cutscene:Play():()
-	if module.Playing == nil or module.Playing.CurrentCutscene == self then
-		module.Playing = module.Playing or self
+	if
+		module.Playing == nil
+		or module.Playing.CurrentCutscene == self
+		or module.Playing.Next == self
+	then
+
+		if not module.Playing or not module.Playing.CurrentCutscene then
+			module.Playing = self
+		end
+
 		self.PointsCopy = {unpack(self.Points)}
 		local pointsCopy = self.PointsCopy
 		local easingFunction = easingFunctions[self.EasingFunction]
@@ -281,6 +291,7 @@ function cutscene:Play():()
 		if not self.Next then
 			self.PreviousCoreGuis = getCoreGuisEnabled()
 			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+			self.PreviousCameraType = camera.CameraType
 		end
 
 		for _, v in ipairs(self.SpecialFunctions[1]) do
@@ -293,7 +304,6 @@ function cutscene:Play():()
 
 		assert(#self.PointsCopy > 1, "More than one point is required")
 
-		self.PreviousCameraType = camera.CameraType
 		camera.CameraType = Enum.CameraType.Scriptable
 
 		self.PlaybackState = Enum.PlaybackState.Playing
@@ -322,7 +332,7 @@ function cutscene:Play():()
 				self.PlaybackState = Enum.PlaybackState.Completed
 
 				if self.Next then
-					if self.Next == 0 then --last
+					if self.Next == 0 then --last (0 only occurs in queue)
 						local queue = module.Playing --other name maybe
 						module.Playing = nil
 						queue.PlaybackState = Enum.PlaybackState.Completed
@@ -408,6 +418,7 @@ end
 function cutscene:Resume():()
 	if module.Playing == nil or module.Playing.CurrentCutscene == self then
 		if self.PassedTime and self.PassedTime ~= 0 then
+
 			module.Playing = module.Playing or self
 			local duration = self.Duration
 			local pointsCopy = self.PointsCopy
@@ -444,11 +455,28 @@ function cutscene:Resume():()
 					self.PlaybackState = Enum.PlaybackState.Completed
 
 					if self.Next then
-						if module.Playing.CurrentCutscene then --if queue
-							module.Playing.CurrentCutscene = self.Next
+						if self.Next == 0 then --last (0 only occurs in queue)
+							local queue = module.Playing --other name maybe
+							module.Playing = nil
+							queue.PlaybackState = Enum.PlaybackState.Completed
+							camera.CameraType = queue.PreviousCameraType
+							queue.CurrentCutscene = nil
+							for k, v in next, queue.PreviousCoreGuis do
+								if v then
+									StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
+								end
+							end
+							for _, v in ipairs(queue.Cutscenes) do
+								v.Next = nil
+							end
+							queue.Completed:Fire(Enum.PlaybackState.Completed)
+						else
+							if module.Playing.CurrentCutscene then --if queue
+								module.Playing.CurrentCutscene = self.Next
+							end
+							self.Completed:Fire(Enum.PlaybackState.Completed)
+							self.Next:Play()
 						end
-						self.Completed:Fire(Enum.PlaybackState.Completed)
-						self.Next:Play()
 					else
 						module.Playing = nil
 						if not self.CustomCamera then
@@ -485,14 +513,17 @@ function cutscene:Cancel():()
 			end
 		end
 
-		if not self.CustomCamera then
-			camera.CameraType = self.PreviousCameraType
-		end
-		for k, v in next, self.PreviousCoreGuis do
-			if v then
-				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
+		if not self.Next then
+			if not self.CustomCamera then
+				camera.CameraType = self.PreviousCameraType
+			end
+			for k, v in next, self.PreviousCoreGuis do
+				if v then
+					StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType[k], true)
+				end
 			end
 		end
+
 		self.PlaybackState = Enum.PlaybackState.Cancelled
 		self.Completed:Fire(Enum.PlaybackState.Cancelled)
 	else
@@ -625,7 +656,7 @@ function queue:Play():()
 			if cutscenes[i+1] then
 				v.Next = cutscenes[i+1]
 			else
-				v.Next = 0
+				v.Next = 0 --last
 			end
 		end
 
@@ -644,9 +675,6 @@ end
 
 function queue:Pause(waitTime:number?):()
 	if module.Playing then
-		for _, v in ipairs(self.Cutscenes) do
-			v.Next = nil
-		end
 		self.CurrentCutscene:Pause(waitTime)
 	else
 		error("Error while calling Pause - There was no queue playing")
@@ -656,16 +684,6 @@ end
 function queue:Resume():()
 	if module.Playing == nil then
 		module.Playing = self
-		local cutscenes = self.Cutscenes
-
-		for i, v in ipairs(cutscenes) do
-			if cutscenes[i+1] then
-				v.Next = cutscenes[i+1]
-			else
-				v.Next = 0
-			end
-		end
-
 		self.CurrentCutscene:Resume()
 	else	
 		error("Error while calling Resume - A cutscene/queue was already playing")
@@ -674,7 +692,7 @@ end
 
 function queue:Cancel():()
 	if module.Playing then
-		self.CurrentCutscene:Cancel(false)
+		self.CurrentCutscene:Cancel()
 		self.CurrentCutscene = nil
 		camera.CameraType = self.PreviousCameraType
 		for k, v in next, self.PreviousCoreGuis do
