@@ -2,7 +2,7 @@
 
 Tutorial & Documentation: devforum.roblox.com/t/718571
 
-Version of this module: 1.4.3
+Version of this module: 1.4.4
 
 Created by Vaschex
 
@@ -19,7 +19,7 @@ module.Settings = {
 -------------------------------------------------
 
 local plr = game.Players.LocalPlayer
-local char
+local char, rootPart
 
 do
 	local function characterAdded(character)
@@ -29,6 +29,7 @@ do
 			end
 		end)
 		char = character
+		rootPart = char:WaitForChild("HumanoidRootPart")
 	end
 	if plr.Character then --if CharacterAdded was fired before connecting
 		characterAdded(plr.Character)
@@ -36,12 +37,12 @@ do
 	plr.CharacterAdded:Connect(characterAdded)
 end
 char = plr.Character or plr.CharacterAdded:Wait()
+rootPart = char:WaitForChild("HumanoidRootPart")
 
 local RunService = game:GetService("RunService")
 local StarterGui = game.StarterGui
 local controls = require(plr.PlayerScripts.PlayerModule):GetControls()
 local easingFunctions = require(script.EasingFunctions)
-local rootPart = char:WaitForChild("HumanoidRootPart")
 local camera = workspace.CurrentCamera
 local clock = os.clock
 
@@ -168,14 +169,12 @@ end
 --de Casteljau's algorithm
 local function getCF(points:{[number]:CFrame}, t:number):CFrame
 	local copy = {unpack(points)}
-	repeat
-		for i, v in ipairs(copy) do
-			if i ~= 1 then copy[i-1] = copy[i-1]:Lerp(v, t) end
+	local n = #copy
+	for j = 1, n - 1 do
+		for k = 1, n - j do
+			copy[k] = copy[k]:Lerp(copy[k + 1], t)
 		end
-		if #copy ~= 1 then
-			copy[#copy] = nil
-		end
-	until #copy == 1
+	end
 	return copy[1]
 end
 
