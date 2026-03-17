@@ -29,7 +29,8 @@ TweenService is probably the best choice for tweening between 2 points. However,
 2. Create a Folder in `Workspace` and name it `Cutscene1`.
 3. Insert parts (also called points) into the folder. Name the parts `1`, `2`, `3`, etc. The cutscene will start at point `1` and end at the highest numbered point.
 4. Position the parts and make sure their front surfaces are looking in the direction you want the camera to face.
-   * *Tip: The more points in a cutscene, the more calculations have to be done—don't add unnecessarily many!*
+
+*Tip: The more points in a cutscene, the more calculations have to be done - don't add unnecessarily many!*
 
 Now create a `LocalScript` in `StarterGui` to play the cutscene:
 
