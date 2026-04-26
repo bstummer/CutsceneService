@@ -1,14 +1,16 @@
 --[[
 
-Tutorial & Documentation: devforum.roblox.com/t/718571
+CutsceneService: Smooth camera cutscenes using Bézier curves
+
+GitHub: https://github.com/bstummer/CutsceneService
+Tutorial & Documentation: https://bstummer.github.io/CutsceneService/
 
 Version of this module: 1.4.4
-
-Created by Vaschex
+Created by bstummer
 
 MIT License
 
-Copyright (c) 2024 Vaschex
+Copyright (c) 2024 bstummer
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
