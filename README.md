@@ -12,12 +12,22 @@
 
 ## Introduction
 
-TweenService is probably the best choice for tweening between 2 points. However, when you have more than 2 points, calculating multiple tweens linearly doesn't look good and can feel rigid. 
+While Roblox's native TweenService is perfect for simple A-to-B movements, chaining multiple linear tweens together often results in stiff, robotic camera transitions.
 
-**CutsceneService** is a module which specializes in solving this using **[Bézier curves](https://en.wikipedia.org/wiki/B%C3%A9zier_curve)**. It provides a smooth camera transition across multiple points, is easy to use, fully customizable, and comes with a wide range of features.
+**CutsceneService** solves this by using mathematically precise **[Bézier curves](https://en.wikipedia.org/wiki/B%C3%A9zier_curve)**. It generates fluid, continuous camera paths across multiple points, is easy to use, fully customizable, and comes with a wide range of features.
 
-[![CutsceneService Showcase](https://img.youtube.com/vi/AyFJAU0B5V8/maxresdefault.jpg)](https://youtu.be/AyFJAU0B5V8)
-*(Click the image to watch the showcase video on YouTube)*
+*Want to see a demonstration? Watch the [Showcase Video on YouTube](https://youtu.be/AyFJAU0B5V8)*
+
+<br>
+
+## Features
+
+- Bézier Curve Pathing: Replaces rigid, linear TweenService movements with perfectly smooth, multi-point camera transitions.
+- Dedicated Studio Plugin: Includes a companion helper plugin to easily create, visualize, and preview your camera paths directly in Roblox Studio.
+- Dynamic Queuing & Looping: Seamlessly play multiple cutscenes back-to-back or loop individual cutscenes continuously.
+- Built-in Special Functions: Trigger specific actions during playback, such as DisableControls, FreezeCharacter, or jumping to the CurrentCameraPoint.
+- Automatic State Restoration: The module automatically caches your PreviousCameraType and PreviousCoreGuis before playback and safely restores them when the cutscene ends.
+- Memory-Safe Events: Powered by GoodSignal under the hood to ensure robust, memory-leak-free event handling for cutscene completion and state changes.
 
 <br>
 
